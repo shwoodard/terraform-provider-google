@@ -119,8 +119,19 @@ type ComputeOperationError compute.OperationError
 func (e ComputeOperationError) Error() string {
 	var buf bytes.Buffer
 	for _, err := range e.Errors {
-		buf.WriteString(err.Message + "\n")
+		msg := findPreferredOperationErrorMsg(err)
+		buf.WriteString(msg + "\n")
 	}
 
 	return buf.String()
+}
+
+func findPreferredOperationErrorMsg(opError *compute.OperationErrorErrors) string {
+	for _, errDetail := range opError.ErrorDetails {
+		if errDetail.LocalizedMessage != nil && errDetail.LocalizedMessage.Message != "" {
+			return errDetail.LocalizedMessage.Message
+		}
+	}
+
+	return opError.Message
 }
