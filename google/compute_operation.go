@@ -99,6 +99,11 @@ func computeOperationWaitTime(config *Config, res interface{}, project, activity
 		return err
 	}
 
+	if op.Error != nil {
+		opErr := *op.Error
+		return ComputeOperationError(opErr)
+	}
+
 	w := &ComputeOperationWaiter{
 		Service: config.NewComputeClient(userAgent),
 		Context: config.context,
