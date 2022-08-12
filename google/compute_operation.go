@@ -3,8 +3,10 @@ package google
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"time"
 
@@ -117,21 +119,41 @@ func computeOperationWaitTime(config *Config, res interface{}, project, activity
 type ComputeOperationError compute.OperationError
 
 func (e ComputeOperationError) Error() string {
-	var buf bytes.Buffer
+	buf := bytes.NewBuffer(nil)
 	for _, err := range e.Errors {
-		msg := findPreferredOperationErrorMsg(err)
-		buf.WriteString(msg + "\n")
+		writeOperationError(buf, err)
+		buf.WriteString("\n")
 	}
 
 	return buf.String()
 }
 
-func findPreferredOperationErrorMsg(opError *compute.OperationErrorErrors) string {
-	for _, errDetail := range opError.ErrorDetails {
-		if errDetail.LocalizedMessage != nil && errDetail.LocalizedMessage.Message != "" {
-			return errDetail.LocalizedMessage.Message
+func writeOperationError(w io.Writer, opError *compute.OperationErrorErrors) {
+	w.Write([]byte(opError.Message + "\n"))
+
+	var lmMsg string
+	var ei *compute.ErrorInfo
+
+	for _, ed := range opError.ErrorDetails {
+		if ed.LocalizedMessage != nil && ed.LocalizedMessage.Message != "" {
+			lmMsg = ed.LocalizedMessage.Message
+		}
+
+		if ed.ErrorInfo != nil {
+			ei = ed.ErrorInfo
 		}
 	}
 
-	return opError.Message
+	if lmMsg != "" {
+		w.Write([]byte(lmMsg + "\n"))
+	}
+
+	if ei != nil {
+		if err := json.NewEncoder(w).Encode(ei); err != nil {
+			log.Printf("[WARN] JSON serialization faield for Compute OperationError ErrorInfo: %v", err)
+			return
+		}
+
+		w.Write([]byte("\n"))
+	}
 }
