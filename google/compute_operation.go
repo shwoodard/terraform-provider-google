@@ -139,7 +139,7 @@ func writeOperationError(w io.StringWriter, opError *compute.OperationErrorError
 			lm = ed.LocalizedMessage
 		}
 
-		if ed.Help != nil && len(ed.Help.Links) > 0 {
+		if link == nil && ed.Help != nil && len(ed.Help.Links) > 0 {
 			link = ed.Help.Links[0]
 		}
 
